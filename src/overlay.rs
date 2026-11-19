@@ -129,39 +129,49 @@ impl OverlayState {
         self.frame.height as f32
     }
 
+    fn dpi_scale(&self) -> f32 {
+        self.frame.dpi_scale.clamp(1.0, 3.0)
+    }
+
     fn top_toolbar_rect(&self) -> RectF {
-        let w = 410.0_f32.min(self.width_f() - 32.0);
-        let h = 44.0;
+        let s = self.dpi_scale();
+        let w = (410.0 * s).min(self.width_f() - 32.0 * s);
+        let h = 44.0 * s;
         let x = (self.width_f() - w) * 0.5;
-        let y = 22.0;
+        let y = 22.0 * s;
         RectF::new(x, y, w, h)
     }
 
     fn btn_linear_rect(&self) -> RectF {
+        let s = self.dpi_scale();
         let bar = self.top_toolbar_rect();
-        RectF::new(bar.x + 8.0, bar.y + 6.0, 118.0, 32.0)
+        RectF::new(bar.x + 8.0 * s, bar.y + 6.0 * s, 118.0 * s, 32.0 * s)
     }
 
     fn btn_box_rect(&self) -> RectF {
+        let s = self.dpi_scale();
         let bar = self.top_toolbar_rect();
-        RectF::new(bar.x + 132.0, bar.y + 6.0, 112.0, 32.0)
+        RectF::new(bar.x + 132.0 * s, bar.y + 6.0 * s, 112.0 * s, 32.0 * s)
     }
 
     fn btn_copy_all_rect(&self) -> RectF {
+        let s = self.dpi_scale();
         let bar = self.top_toolbar_rect();
-        RectF::new(bar.x + 250.0, bar.y + 6.0, 112.0, 32.0)
+        RectF::new(bar.x + 250.0 * s, bar.y + 6.0 * s, 112.0 * s, 32.0 * s)
     }
 
     fn btn_close_rect(&self) -> RectF {
+        let s = self.dpi_scale();
         let bar = self.top_toolbar_rect();
-        RectF::new(bar.right() - 40.0, bar.y + 6.0, 32.0, 32.0)
+        RectF::new(bar.right() - 40.0 * s, bar.y + 6.0 * s, 32.0 * s, 32.0 * s)
     }
 
     fn status_pill_rect(&self) -> RectF {
-        let w = 470.0_f32.min(self.width_f() - 32.0);
-        let h = 36.0;
+        let s = self.dpi_scale();
+        let w = (540.0 * s).min(self.width_f() - 32.0 * s);
+        let h = 36.0 * s;
         let x = (self.width_f() - w) * 0.5;
-        let y = 72.0;
+        let y = 74.0 * s;
         RectF::new(x, y, w, h)
     }
 
@@ -698,13 +708,14 @@ impl OverlayState {
         let Some(b) = &self.brushes else { return };
         let solid = &b.solid;
 
+        let s = self.dpi_scale();
         let bar = self.top_toolbar_rect();
         let pill = self.status_pill_rect();
 
         let bar_rrect = D2D1_ROUNDED_RECT {
             rect: to_d2d_rect(bar),
-            radiusX: 10.0,
-            radiusY: 10.0,
+            radiusX: 10.0 * s,
+            radiusY: 10.0 * s,
         };
         solid.SetColor(&D2D1_COLOR_F {
             r: 0.067,
@@ -720,11 +731,11 @@ impl OverlayState {
             b: 0.20,
             a: 0.90,
         });
-        rt.DrawRoundedRectangle(&bar_rrect, solid, 1.2, None);
+        rt.DrawRoundedRectangle(&bar_rrect, solid, 1.2 * s, None);
 
         let effective = self.effective_mode();
         let (hx, hy) = self.hover_pos;
-        let btn_radius = 7.0;
+        let btn_radius = 7.0 * s;
 
         for (rect, label, is_active) in [
             (
@@ -970,6 +981,8 @@ pub fn run_overlay_session(
         let dwrite_factory: IDWriteFactory = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED)
             .map_err(|e| format!("Gagal menginisialisasi DirectWrite Factory: {e}"))?;
 
+        let ui_scale = frame.dpi_scale.clamp(1.0, 3.0);
+
         let text_format_ui = dwrite_factory
             .CreateTextFormat(
                 w!("Segoe UI"),
@@ -977,7 +990,7 @@ pub fn run_overlay_session(
                 DWRITE_FONT_WEIGHT_SEMI_BOLD,
                 DWRITE_FONT_STYLE_NORMAL,
                 DWRITE_FONT_STRETCH_NORMAL,
-                13.0,
+                13.0 * ui_scale,
                 w!("en-us"),
             )
             .map_err(|e| format!("Gagal membuat format font UI: {e}"))?;
@@ -991,7 +1004,7 @@ pub fn run_overlay_session(
                 DWRITE_FONT_WEIGHT_NORMAL,
                 DWRITE_FONT_STYLE_NORMAL,
                 DWRITE_FONT_STRETCH_NORMAL,
-                12.5,
+                12.5 * ui_scale,
                 w!("en-us"),
             )
             .map_err(|e| format!("Gagal membuat format font status: {e}"))?;

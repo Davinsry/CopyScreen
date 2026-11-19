@@ -28,8 +28,11 @@ use windows::Win32::Graphics::Dwm::{
     DWMWCP_ROUND,
 };
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_B8G8R8A8_UNORM;
-use windows::Win32::Graphics::Gdi::{BeginPaint, EndPaint, InvalidateRect, PAINTSTRUCT};
+use windows::Win32::Graphics::Gdi::{
+    BeginPaint, EndPaint, InvalidateRect, MonitorFromPoint, MONITOR_DEFAULTTONEAREST, PAINTSTRUCT,
+};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::UI::HiDpi::{GetDpiForMonitor, GetDpiForWindow, MDT_EFFECTIVE_DPI};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, VK_CONTROL, VK_ESCAPE, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_LWIN, VK_MENU,
     VK_RCONTROL, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SHIFT,
@@ -89,6 +92,7 @@ struct DashboardState {
     status_note: String,
 
     hover: (f32, f32),
+    dpi_scale: f32,
     focused_index: Option<usize>,
     final_action: DashboardAction,
 }
@@ -233,14 +237,17 @@ impl DashboardState {
         let w = (rc.right - rc.left).max(WIN_WIDTH as i32) as u32;
         let h = (rc.bottom - rc.top).max(WIN_HEIGHT as i32) as u32;
 
+        let dpi = GetDpiForWindow(self.hwnd).max(96) as f32;
+        self.dpi_scale = (dpi / 96.0).clamp(1.0, 3.0);
+
         let props = D2D1_RENDER_TARGET_PROPERTIES {
             r#type: D2D1_RENDER_TARGET_TYPE_DEFAULT,
             pixelFormat: D2D1_PIXEL_FORMAT {
                 format: DXGI_FORMAT_B8G8R8A8_UNORM,
                 alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
             },
-            dpiX: 96.0,
-            dpiY: 96.0,
+            dpiX: dpi,
+            dpiY: dpi,
             usage: D2D1_RENDER_TARGET_USAGE_NONE,
             minLevel: Default::default(),
         };
@@ -902,6 +909,14 @@ pub fn run_dashboard_ui(initial_mode: SelectionMode) -> DashboardAction {
                 "Nonaktif (jalankan manual saat dibutuhkan)".to_string()
             };
 
+            let mut cursor_pt = windows::Win32::Foundation::POINT::default();
+            let _ = windows::Win32::UI::WindowsAndMessaging::GetCursorPos(&mut cursor_pt);
+            let hmon = MonitorFromPoint(cursor_pt, MONITOR_DEFAULTTONEAREST);
+            let mut mon_dpi_x: u32 = 96;
+            let mut mon_dpi_y: u32 = 96;
+            let _ = GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, &mut mon_dpi_x, &mut mon_dpi_y);
+            let dpi_scale = (mon_dpi_x as f32 / 96.0).clamp(1.0, 3.0);
+
             let state = Box::new(DashboardState {
                 hwnd: HWND::default(),
                 d2d_factory,
@@ -920,6 +935,7 @@ pub fn run_dashboard_ui(initial_mode: SelectionMode) -> DashboardAction {
                 autostart: autostart_now,
                 status_note: note,
                 hover: (0.0, 0.0),
+                dpi_scale,
                 focused_index: None,
                 final_action: DashboardAction::MinimizeToTray(initial_mode),
             });
@@ -927,8 +943,8 @@ pub fn run_dashboard_ui(initial_mode: SelectionMode) -> DashboardAction {
 
             let screen_w = GetSystemMetrics(SM_CXSCREEN);
             let screen_h = GetSystemMetrics(SM_CYSCREEN);
-            let win_w = WIN_WIDTH as i32 + 16;
-            let win_h = WIN_HEIGHT as i32 + 39;
+            let win_w = ((WIN_WIDTH as f32 + 16.0) * dpi_scale).round() as i32;
+            let win_h = ((WIN_HEIGHT as f32 + 39.0) * dpi_scale).round() as i32;
             let pos_x = ((screen_w - win_w) / 2).max(20);
             let pos_y = ((screen_h - win_h) / 2).max(20);
 
@@ -1052,8 +1068,8 @@ unsafe extern "system" fn dashboard_wnd_proc(
         }
 
         WM_MOUSEMOVE => {
-            let x = (lparam.0 & 0xFFFF) as i16 as f32;
-            let y = ((lparam.0 >> 16) & 0xFFFF) as i16 as f32;
+            let x = ((lparam.0 & 0xFFFF) as i16 as f32) / state.dpi_scale;
+            let y = (((lparam.0 >> 16) & 0xFFFF) as i16 as f32) / state.dpi_scale;
             state.hover = (x, y);
             let _ = InvalidateRect(hwnd, None, false);
             LRESULT(0)
@@ -1073,8 +1089,8 @@ unsafe extern "system" fn dashboard_wnd_proc(
         }
 
         WM_LBUTTONDOWN => {
-            let x = (lparam.0 & 0xFFFF) as i16 as f32;
-            let y = ((lparam.0 >> 16) & 0xFFFF) as i16 as f32;
+            let x = ((lparam.0 & 0xFFFF) as i16 as f32) / state.dpi_scale;
+            let y = (((lparam.0 >> 16) & 0xFFFF) as i16 as f32) / state.dpi_scale;
 
             let active_bar = RectF::new(24.0, 108.0, 330.0, 34.0);
             if state.recording_custom && active_bar.contains(x, y) {

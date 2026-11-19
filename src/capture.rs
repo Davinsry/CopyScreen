@@ -7,6 +7,7 @@ use windows::Win32::Graphics::Gdi::{
     GetMonitorInfoW, MonitorFromPoint, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER,
     BI_RGB, CAPTUREBLT, DIB_RGB_COLORS, MONITORINFO, MONITOR_DEFAULTTONEAREST, SRCCOPY,
 };
+use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
 
 #[derive(Debug, Clone)]
 pub struct CapturedFrame {
@@ -18,6 +19,8 @@ pub struct CapturedFrame {
     pub width: u32,
     /// Height of the captured monitor in physical pixels.
     pub height: u32,
+    /// Monitor DPI scale factor (`1.0` at 100% / 96 DPI, `1.25` at 125%, `1.5` at 150%, etc.).
+    pub dpi_scale: f32,
     /// Click X coordinate relative to this monitor (`0..width`).
     pub local_click_x: f32,
     /// Click Y coordinate relative to this monitor (`0..height`).
@@ -73,6 +76,11 @@ pub fn capture_monitor_at_point(screen_x: i32, screen_y: i32) -> Result<Captured
         let mon_y = mi.rcMonitor.top;
         let width = (mi.rcMonitor.right - mi.rcMonitor.left).max(1) as u32;
         let height = (mi.rcMonitor.bottom - mi.rcMonitor.top).max(1) as u32;
+
+        let mut dpi_x: u32 = 96;
+        let mut dpi_y: u32 = 96;
+        let _ = GetDpiForMonitor(hmonitor, MDT_EFFECTIVE_DPI, &mut dpi_x, &mut dpi_y);
+        let dpi_scale = (dpi_x as f32 / 96.0).clamp(1.0, 3.0);
 
         let hdc_screen = GetDC(HWND::default());
         if hdc_screen.is_invalid() {
@@ -182,6 +190,7 @@ pub fn capture_monitor_at_point(screen_x: i32, screen_y: i32) -> Result<Captured
             monitor_y: mon_y,
             width,
             height,
+            dpi_scale,
             local_click_x,
             local_click_y,
             pixels_bgra,
@@ -200,6 +209,7 @@ mod tests {
             monitor_y: 0,
             width: 64,
             height: 32,
+            dpi_scale: 1.0,
             local_click_x: 10.0,
             local_click_y: 10.0,
             pixels_bgra: vec![255u8; 64 * 32 * 4],
