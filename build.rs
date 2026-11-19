@@ -11,7 +11,7 @@ fn main() {
     let grp_icon = build_group_icon_dir(&[(64, icon_64.len() as u32, 1), (32, icon_32.len() as u32, 2)]);
     let manifest = br#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
-  <assemblyIdentity type="win32" name="Davin.CopyScreen" version="0.1.0.0" processorArchitecture="amd64"/>
+  <assemblyIdentity type="win32" name="Davin.CopyScreen" version="0.1.1.0" processorArchitecture="amd64"/>
   <description>CopyScreen - Open Source Screen Text Extractor</description>
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security>

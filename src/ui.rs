@@ -313,7 +313,7 @@ impl DashboardState {
             draw_text(
                 &rt,
                 &self.fmt_small_left,
-                "v0.1.0 (MIT)  ·  Aktif di System Tray",
+                "v0.1.1 (MIT)  ·  Aktif di System Tray",
                 RectF::new(78.0, 42.0, 260.0, 18.0),
                 ts,
             );

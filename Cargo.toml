@@ -1,6 +1,6 @@
 [package]
 name = "copyscreen"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Davin"]
 description = "Ultra-lightweight open-source Windows screen text extractor (Ctrl+Win+LeftClick) with instant glow overlay and drag-to-copy OCR."
